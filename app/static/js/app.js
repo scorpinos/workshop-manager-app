@@ -408,25 +408,32 @@ function collectMaterials() {
       is_labor: row.dataset.isLabor === '1' || $('.mat-category', row).value === 'Labor',
       total_price: Number($('.mat-total', row).value || 0),
     };
-  }).filter(item => item.material_name);
+  });
 }
 
 async function calculateProject() {
   try {
     const dialog = $('#projectDialog');
+    const materials = collectMaterials();
     const payload = {
       width: Number($('[name="width"]', dialog).value || 0),
       height: Number($('[name="height"]', dialog).value || 0),
       final_price: Number($('[name="final_price"]', dialog).value || 0),
-      materials: collectMaterials(),
+      materials: materials.filter(m => m.material_name),
     };
     const result = await api('/calculate', { method: 'POST', body: JSON.stringify(payload) });
-    result.materials.forEach((material, index) => {
-      const row = $$('.material-row')[index];
-      if (!row) return;
+
+    let resultIndex = 0;
+    $$('.material-row').forEach((row, index) => {
+      const material = materials[index];
+      if (!material.material_name) return;
+
+      const calcResult = result.materials[resultIndex++];
+      if (!calcResult) return;
+
       if (!$('.mat-override', row).checked) {
-        $('.mat-qty', row).value = material.quantity || '';
-        $('.mat-total', row).value = material.total_price ? roundUp(material.total_price) : '';
+        $('.mat-qty', row).value = calcResult.quantity || '';
+        $('.mat-total', row).value = calcResult.total_price ? roundUp(calcResult.total_price) : '';
       }
     });
     setTotals(result.totals);
