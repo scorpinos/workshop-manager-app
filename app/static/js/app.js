@@ -368,8 +368,8 @@ function openFormulaDialog(row) {
 }
 
 function hydrateMaterialFromCatalog(row) {
-  const name = $('.mat-name', row).value.trim();
-  const material = (state.lookups.materials || []).find(item => item.name === name);
+  const material_name = $('.mat-name', row).value.trim();
+  const material = (state.lookups.materials || []).find(item => item.name === material_name);
   if (!material || row.dataset.hydrated === `${material.id}`) return;
   row.dataset.hydrated = `${material.id}`;
   $('.mat-category', row).value = material.category || '';
@@ -377,7 +377,7 @@ function hydrateMaterialFromCatalog(row) {
   $('.mat-price', row).value = material.unit_price || '';
   $('.mat-formula', row).value = material.formula || '';
   $('.mat-waste', row).value = material.waste_percent || '';
-  row.dataset.isLabor = material.category === 'Labor' || name === 'Working hand' ? '1' : '0';
+  row.dataset.isLabor = material.category === 'Labor' || material_name === 'Working hand' ? '1' : '0';
   if (material.formula) $('.mat-auto', row).checked = true;
 }
 
@@ -399,6 +399,24 @@ function collectMaterials() {
       is_labor: row.dataset.isLabor === '1' || $('.mat-category', row).value === 'Labor' || material_name === 'Working hand',
       total_price: Number($('.mat-total', row).value || 0),
     };
+  }).filter(item => item.material_name);
+}
+
+async function calculateProject() {
+  try {
+    const dialog = $('#projectDialog');
+    const payload = {
+      width: Number($('[name="width"]', dialog).value || 0),
+      height: Number($('[name="height"]', dialog).value || 0),
+      final_price: Number($('[name="final_price"]', dialog).value || 0),
+      materials: collectMaterials(),
+    };
+    const result = await api('/calculate', { method: 'POST', body: JSON.stringify(payload) });
+    const rowsWithNames = $$('.material-row').filter(row => $('.mat-name', row).value.trim());
+    result.materials.forEach((material, index) => {
+      const row = rowsWithNames[index];
+      if (!row) return;
+      if (!$('.mat-override', row).checked) {
         $('.mat-qty', row).value = material.quantity || '';
         $('.mat-total', row).value = material.total_price ? roundUp(material.total_price) : '';
       }
