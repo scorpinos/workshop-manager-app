@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Workshop & Expense Manager</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  <script defer src="{{ url_for('static', filename='js/app.js') }}"></script>
+</head>
+<body data-role="{{ user.role }}">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand"><span>WM</span><strong>Workshop</strong></div>
+      <button class="nav-btn active" data-view="dashboard">Dashboard</button>
+      <button class="nav-btn" data-view="stats">Statistics</button>
+      <button class="nav-btn" data-view="settings">Settings</button>
+      <a class="nav-btn" href="/logout">Logout</a>
+      <div class="user-chip">{{ user.display_name or user.username }} - {{ user.role }}</div>
+    </aside>
+
+    <main class="content">
+      <header class="topbar">
+        <div>
+          <h1>Workshop & Expense Manager</h1>
+          <p>Projects, materials, payments, formulas, and exports in one place.</p>
+        </div>
+        <div class="top-actions">
+          <button id="themeToggle" class="icon-btn" title="Toggle theme">Theme</button>
+          <button id="backupBtn" class="ghost-btn">Backup</button>
+          <button id="newProjectBtn" class="primary-btn">New Project</button>
+        </div>
+      </header>
+
+      <section id="dashboard" class="view active">
+        <div class="toolbar">
+          <label>Search<input id="searchInput" placeholder="Search projects, clients, phones..." autocomplete="off"></label>
+          <label>State<select id="stateFilter">
+            <option value="">All states</option>
+            <option value="completed">Completed</option>
+            <option value="in_progress">Work in progress</option>
+            <option value="overdue">Overdue work</option>
+            <option value="unpaid">Unpaid</option>
+          </select></label>
+          <label>Contractor<select id="contractorFilter"><option value="">All contractors</option></select></label>
+          <label>From<input id="fromFilter" type="date"></label>
+          <label>To<input id="toFilter" type="date"></label>
+          <button id="clearFilters" class="ghost-btn">Clear</button>
+        </div>
+        <div class="export-row">
+          <a href="/api/export/pdf">PDF</a>
+          <a href="/api/export/xlsx">Excel</a>
+          <a href="/api/export/csv">CSV</a>
+        </div>
+        <div class="table-wrap">
+          <table id="projectTable">
+            <thead>
+              <tr>
+                <th data-sort="date">Date</th>
+                <th data-sort="deadline">Deadline</th>
+                <th data-sort="shop_name">Shop Name</th>
+                <th data-sort="client_name">Client Name</th>
+                <th data-sort="phone">Phone Number</th>
+                <th data-sort="project_type">Project Type</th>
+                <th data-sort="contractor">Contractor</th>
+                <th data-sort="final_price">Total</th>
+                <th data-sort="remaining_balance">Remaining</th>
+                <th data-sort="computed_state">State</th>
+                <th data-sort="work_done">Work Done</th>
+                <th>Edit</th>
+                <th>Delete</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="stats" class="view">
+        <div class="toolbar stats-toolbar">
+          <label>From<input id="statsFromFilter" type="date"></label>
+          <label>To<input id="statsToFilter" type="date"></label>
+          <label>State<select id="statsStateFilter">
+            <option value="">All states</option>
+            <option value="completed">Completed</option>
+            <option value="in_progress">Work in progress</option>
+            <option value="overdue">Overdue</option>
+            <option value="unpaid">Unpaid</option>
+          </select></label>
+          <button id="clearStatsFilters" class="ghost-btn">Clear</button>
+        </div>
+        <div class="stat-grid" id="statCards"></div>
+        <div class="chart-grid">
+          <div class="panel"><canvas id="incomeChart"></canvas></div>
+          <div class="panel"><canvas id="statusChart"></canvas></div>
+        </div>
+      </section>
+
+      <section id="settings" class="view">
+        <div class="settings-actions panel">
+          <button id="openMaterialManager" class="primary-btn" type="button">Materials</button>
+          <button id="openUserManager" class="ghost-btn admin-only" type="button">Add User</button>
+          <button id="openHelp" class="ghost-btn" type="button">Help</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="projectDialog" class="project-dialog">
+    <form class="dialog-card" novalidate>
+      <div class="dialog-head">
+        <h2 id="dialogTitle">New Project</h2>
+        <button id="topCloseProjectBtn" class="icon-btn" type="button">X</button>
+      </div>
+      <div class="project-form">
+        <section class="panel form-grid project-fields">
+          <label>Project Type<input name="project_type" list="projectTypeList"></label>
+          <label>Date<input name="date" type="date"></label>
+          <label>Deadline<input name="deadline" type="date"></label>
+          <label>Shop Name<input name="shop_name" list="shopList"></label>
+          <label>Client Name<input name="client_name" list="clientList"></label>
+          <label>Phone Number<input name="phone"></label>
+          <label>Address<input name="address"></label>
+          <label>Contractor<input name="contractor" list="contractorList"></label>
+          <label>Width<input name="width" type="number" step="0.01"></label>
+          <label>Height<input name="height" type="number" step="0.01"></label>
+          <label class="check inline-check"><input name="work_done" type="checkbox"> Work done</label>
+          <label class="wide-field">Notes<textarea name="notes"></textarea></label>
+        </section>
+        <section class="panel image-box">
+          <div class="big-image">Drop project pictures here</div>
+          <input id="projectImageInput" type="file" accept="image/*" multiple>
+          <div id="projectThumbs" class="thumb-row"></div>
+        </section>
+      </div>
+      <section class="panel">
+        <div class="section-head">
+          <h3>Materials</h3>
+          <button id="addMaterialRow" class="ghost-btn" type="button">Add Material</button>
+          <label class="check small-check"><input id="workersToggle" type="checkbox"> Workers</label>
+        </div>
+        <div class="table-wrap compact-table">
+          <table id="projectMaterialsTable">
+            <thead>
+              <tr>
+                <th>Material</th>
+                <th>Category</th>
+                <th>Unit</th>
+                <th>Quantity</th>
+                <th>Unit Price</th>
+                <th>Waste %</th>
+                <th>Total</th>
+                <th>Auto</th>
+                <th>Override</th>
+                <th>Formula</th>
+                <th>Delete</th>
+              </tr>
+            </thead>
+            <tbody id="projectMaterials"></tbody>
+          </table>
+        </div>
+      </section>
+      <section class="totals-row">
+        <label>Materials Total<input name="materials_total" readonly class="calculated"></label>
+        <label>Price<input name="price" readonly class="calculated"></label>
+        <label>Final Selling Price<input name="final_price" type="number" min="0" step="0.01"></label>
+        <label>Profit<input name="profit" readonly class="calculated"></label>
+        <label>Profit %<input name="profit_percent" readonly class="calculated"></label>
+      </section>
+      <section class="panel payment-panel">
+        <div class="section-head"><h3>Payment Logger</h3><strong id="remainingBalanceLabel">Remaining: $0.00</strong></div>
+        <div id="paymentList"></div>
+        <div class="payment-row">
+          <label>Payment Amount<input id="paymentAmount" type="number" min="0" step="0.01"></label>
+          <label>Payment Date<input id="paymentDate" type="date"></label>
+          <label>Payment Note<input id="paymentNote"></label>
+          <button id="addPaymentBtn" type="button" class="ghost-btn">Add Payment</button>
+        </div>
+      </section>
+      <menu>
+        <button id="cancelProjectBtn" type="button" class="ghost-btn">Cancel</button>
+        <button id="saveProjectBtn" type="button" class="primary-btn">Save Project</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <dialog id="formulaDialog">
+    <form class="dialog-card small-dialog" novalidate>
+      <div class="dialog-head">
+        <h2>Formula</h2>
+        <button class="icon-btn" type="button" data-close-dialog="formulaDialog">X</button>
+      </div>
+      <label>Formula<input id="formulaInput" list="formulaSuggestions" placeholder="Width * Height"></label>
+      <div class="formula-help">Use Width, Height, Area, Perimeter, W, H, material names, percentages, and simple if/then lines.</div>
+      <menu><button id="saveFormulaBtn" class="primary-btn" type="button">Save Formula</button></menu>
+    </form>
+  </dialog>
+
+  <dialog id="materialDialog">
+    <form class="dialog-card" novalidate>
+      <div class="dialog-head">
+        <h2>Materials</h2>
+        <button class="icon-btn" type="button" data-close-dialog="materialDialog">X</button>
+      </div>
+      <div class="toolbar">
+        <label>Search<input id="materialSearch" placeholder="Search materials"></label>
+        <label>Category<input id="materialCategoryFilter" list="categoryList" placeholder="All categories"></label>
+      </div>
+      <div id="materialForm" class="form-grid project-fields">
+        <label>Name<input name="name"></label>
+        <label>Category<input name="category" list="categoryList"></label>
+        <label>Unit<select name="unit"></select></label>
+        <label>Price<input name="unit_price" type="number" min="0" step="0.01"></label>
+        <label>Formula<input name="formula" list="formulaSuggestions"></label>
+        <label>Waste %<input name="waste_percent" type="number" min="0" step="0.1"></label>
+        <button id="saveMaterialBtn" class="primary-btn" type="button">Save Material</button>
+        <button id="cancelMaterialEdit" class="ghost-btn hidden" type="button">Cancel Edit</button>
+      </div>
+      <div class="table-wrap compact-table">
+        <table id="materialsTable">
+          <thead>
+            <tr>
+              <th data-material-sort="name">Name</th>
+              <th data-material-sort="category">Category</th>
+              <th data-material-sort="unit">Unit</th>
+              <th data-material-sort="unit_price">Price</th>
+              <th data-material-sort="formula">Formula</th>
+              <th>Edit</th>
+              <th>Delete</th>
+            </tr>
+          </thead>
+          <tbody id="materialsList"></tbody>
+        </table>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="userDialog">
+    <form class="dialog-card small-dialog" novalidate>
+      <div class="dialog-head">
+        <h2>Users</h2>
+        <button class="icon-btn" type="button" data-close-dialog="userDialog">X</button>
+      </div>
+      <div id="userForm" class="form-grid project-fields">
+        <label>Username<input name="username" autocomplete="off"></label>
+        <label>Display Name<input name="display_name"></label>
+        <label>Password<input name="password" type="password" autocomplete="new-password"></label>
+        <label>Role<select name="role"><option value="admin">Admin</option><option value="worker">Worker/View Only</option></select></label>
+        <button id="saveUserBtn" class="primary-btn" type="button">Save User</button>
+      </div>
+      <div id="usersList" class="material-list"></div>
+    </form>
+  </dialog>
+
+  <dialog id="helpDialog">
+    <div class="dialog-card small-dialog">
+      <div class="dialog-head">
+        <h2>Help</h2>
+        <button class="icon-btn" type="button" data-close-dialog="helpDialog">X</button>
+      </div>
+      <p>Create projects from the dashboard, add saved materials, use formulas like Width * Height, then log payments as money arrives.</p>
+      <p>Project state is automatic: Work done plus payment creates Completed or Unpaid. Open work past deadline turns red.</p>
+      <p>Use Settings to manage materials and users. Materials can remember formulas by project type.</p>
+    </div>
+  </dialog>
+
+  <datalist id="clientList"></datalist>
+  <datalist id="shopList"></datalist>
+  <datalist id="contractorList"></datalist>
+  <datalist id="projectTypeList"></datalist>
+  <datalist id="categoryList"></datalist>
+  <datalist id="materialList"></datalist>
+  <datalist id="formulaSuggestions">
+    <option value="Width * Height"></option>
+    <option value="Area"></option>
+    <option value="Perimeter"></option>
+    <option value="if Width > Height then Area * 1.5 else Area"></option>
+  </datalist>
+  <div id="toast"></div>
+</body>
+</html>
