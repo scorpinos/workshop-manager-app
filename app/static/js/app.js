@@ -27,7 +27,11 @@ function toast(message) {
   const node = $('#toast');
   node.textContent = message;
   node.classList.add('show');
-  setTimeout(() => node.classList.remove('show'), 2600);
+  if (node.showPopover) node.showPopover();
+  setTimeout(() => {
+    node.classList.remove('show');
+    if (node.hidePopover) node.hidePopover();
+  }, 2600);
 }
 
 function money(value) {
