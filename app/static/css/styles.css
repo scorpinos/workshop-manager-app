@@ -221,11 +221,11 @@ body.light .dialog-card { background: rgba(255,255,255,.98); }
 menu { justify-content: flex-end; padding: 0; margin-bottom: 0; }
 
 #toast {
-  position: fixed; right: 24px; bottom: 24px; padding: 12px 14px; border-radius: var(--radius);
+  position: fixed; top: 24px; left: 50%; padding: 12px 14px; border-radius: var(--radius);
   color: #071015; background: var(--accent); box-shadow: var(--shadow);
-  transform: translateY(90px); opacity: 0; transition: .25s ease; z-index: 20; font-weight: 800;
+  transform: translate(-50%, -100px); opacity: 0; transition: .3s cubic-bezier(0.18, 0.89, 0.32, 1.28); z-index: 9999; font-weight: 800;
 }
-#toast.show { transform: none; opacity: 1; }
+#toast.show { transform: translate(-50%, 0); opacity: 1; }
 
 .login-body { display: grid; place-items: center; }
 .login-shell { width: min(420px, calc(100vw - 28px)); }
