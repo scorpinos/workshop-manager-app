@@ -207,7 +207,7 @@ def project_totals(project_id):
 def stats(filters=None):
     projects = list_projects(filters)
     total_profit = sum(p["profit"] for p in projects)
-    unpaid = sum(max(p["remaining_balance"], 0) for p in projects)
+    unpaid = sum(max(p["remaining_balance"], 0) for p in projects if p["status"] != "paid")
     completed = sum(1 for p in projects if p["status"] in ("completed", "paid"))
     pending = sum(1 for p in projects if p["status"] == "in progress")
     months = {p["date"][:7] for p in projects if p.get("date")}

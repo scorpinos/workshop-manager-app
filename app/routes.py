@@ -89,6 +89,24 @@ def update_project_work_done(project_id):
     return jsonify({"ok": True})
 
 
+@bp.patch("/projects/<int:project_id>/status")
+@api_login_required
+@admin_required
+def update_project_status(project_id):
+    payload = request.get_json() or {}
+    status = payload.get("status")
+    if status not in ("in progress", "completed", "paid"):
+        raise ValueError("Invalid status")
+
+    work_done = 1 if status in ("completed", "paid") else 0
+    get_db().execute(
+        "UPDATE projects SET status = ?, work_done = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        (status, work_done, project_id),
+    )
+    get_db().commit()
+    return jsonify({"ok": True})
+
+
 @bp.delete("/projects/<int:project_id>")
 @api_login_required
 @admin_required
