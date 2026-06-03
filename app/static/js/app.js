@@ -25,6 +25,8 @@ async function api(path, options = {}) {
 
 function toast(message) {
   const node = $('#toast');
+  const activeDialog = $$('dialog[open]').pop();
+  (activeDialog || document.body).appendChild(node);
   node.textContent = message;
   node.classList.add('show');
   setTimeout(() => node.classList.remove('show'), 2600);
