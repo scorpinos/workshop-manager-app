@@ -164,11 +164,12 @@ body.light th, body.light td { border-bottom-color: rgba(20,33,52,.2); }
 th { color: var(--muted); font-size: 12px; cursor: pointer; user-select: none; position: sticky; top: 0; background: rgba(22,27,37,.96); }
 body.light th { background: rgba(255,255,255,.96); }
 tr:hover td { background: rgba(255,255,255,.04); }
-.status { display: inline-flex; align-items: center; padding: 6px 9px; border-radius: 999px; font-size: 12px; font-weight: 800; }
-.status.paid, .status.completed { color: #071015; background: var(--accent-2); }
-.status.in-progress { color: #2f2400; background: var(--warning); }
-.status.overdue { color: #fff; background: var(--danger); }
-.status.unpaid { color: #fff; background: var(--danger); }
+.status, .status-select { display: inline-flex; align-items: center; padding: 6px 9px; border-radius: 999px; font-size: 12px; font-weight: 800; border: none; cursor: pointer; }
+.status.paid, .status.completed, .status-select.paid, .status-select.completed { color: #071015; background: var(--accent-2); }
+.status.in-progress, .status-select.in-progress { color: #2f2400; background: var(--warning); }
+.status.overdue, .status-select.overdue { color: #fff; background: var(--danger); }
+.status.unpaid, .status-select.unpaid { color: #fff; background: var(--danger); }
+.status-select { appearance: none; -webkit-appearance: none; text-align: center; }
 
 .panel {
   border: 1px solid var(--line);
@@ -196,13 +197,16 @@ body.light .dialog-card { background: rgba(255,255,255,.98); }
 .thumb-row span { aspect-ratio: 1.5; border-radius: var(--radius); background: rgba(255,255,255,.08); border: 1px solid var(--line); overflow: hidden; }
 .thumb-row img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .compact-table { margin-top: 12px; box-shadow: none; }
-.compact-table table { min-width: 1050px; }
+.compact-table table { min-width: 1200px; }
 .compact-table input,
 .compact-table select {
   width: 100%;
-  min-width: 90px;
+  min-width: 80px;
   min-height: 32px;
   padding: 5px 7px;
+}
+.compact-table input.mat-formula {
+  min-width: 250px;
 }
 .compact-table .icon-btn { width: 32px; height: 32px; }
 .totals-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin: 14px 0; }

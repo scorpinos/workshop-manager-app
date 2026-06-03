@@ -212,18 +212,14 @@ async function refreshProjects() {
 
 function addComputedState(project) {
   const paid = Number(project.remaining_balance || 0) <= 0 && Number(project.final_price || 0) > 0;
-  const done = Boolean(project.work_done) || project.status === 'completed' || project.status === 'paid';
-  const overdue = !done && project.deadline && project.deadline < today();
-  let computed_state = 'work in progress';
-  let state_class = overdue ? 'overdue' : 'in-progress';
-  if (done && paid) {
-    computed_state = 'Completed';
-    state_class = 'completed';
-  } else if (done && !paid) {
-    computed_state = 'Unpaid';
-    state_class = 'unpaid';
-  }
-  return { ...project, paid, done, overdue, computed_state, state_class };
+  const overdue = project.status === 'in progress' && project.deadline && project.deadline < today();
+
+  let state_class = 'in-progress';
+  if (project.status === 'paid') state_class = 'paid';
+  else if (project.status === 'completed') state_class = paid ? 'completed' : 'unpaid';
+  else if (overdue) state_class = 'overdue';
+
+  return { ...project, paid, overdue, state_class };
 }
 
 function renderProjects() {
@@ -247,8 +243,14 @@ function renderProjects() {
       <td>${escapeHtml(project.contractor || '')}</td>
       <td>${money(project.final_price)}</td>
       <td>${money(project.remaining_balance)}</td>
-      <td><span class="status ${project.state_class}">${escapeHtml(project.computed_state)}</span></td>
-      <td><label class="check small-check"><input class="dash-work-done" type="checkbox" ${project.done ? 'checked' : ''}> Done</label></td>
+      <td>
+        <select class="status-select ${project.state_class}" data-id="${project.id}">
+          <option value="in progress" ${project.status === 'in progress' ? 'selected' : ''}>In Progress</option>
+          <option value="completed" ${project.status === 'completed' ? 'selected' : ''}>Completed</option>
+          <option value="paid" ${project.status === 'paid' ? 'selected' : ''}>Paid</option>
+        </select>
+      </td>
+      <td><label class="check small-check"><input class="dash-work-done" type="checkbox" ${project.status !== 'in progress' ? 'checked' : ''}> Done</label></td>
       <td><button class="ghost-btn edit-btn" type="button">Edit</button></td>
       <td><button class="ghost-btn delete-btn" type="button">Delete</button></td>
     </tr>`).join('');
@@ -258,15 +260,24 @@ function renderProjects() {
     });
     $('.edit-btn', row).addEventListener('click', () => openProjectDialog(row.dataset.id));
     $('.delete-btn', row).addEventListener('click', () => deleteProject(row.dataset.id));
-    $('.dash-work-done', row).addEventListener('change', event => updateWorkDone(row.dataset.id, event.target.checked));
+    $('.dash-work-done', row).addEventListener('change', event => {
+      updateProjectStatus(row.dataset.id, event.target.checked ? 'completed' : 'in progress');
+    });
+    $('.status-select', row).addEventListener('change', event => {
+      updateProjectStatus(row.dataset.id, event.target.value);
+    });
   });
 }
 
-async function updateWorkDone(id, workDone) {
-  await api(`/projects/${id}/work-done`, { method: 'PATCH', body: JSON.stringify({ work_done: workDone }) });
-  await refreshProjects();
-  await refreshStats();
-  toast('Project state updated');
+async function updateProjectStatus(id, status) {
+  try {
+    await api(`/projects/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) });
+    await refreshProjects();
+    await refreshStats();
+    toast('Project status updated');
+  } catch (error) {
+    toast(error.message);
+  }
 }
 
 async function openProjectDialog(id = null) {
@@ -337,13 +348,12 @@ function addMaterialRow(material = {}) {
     <td><input class="mat-total calculated" readonly value="${material.total_price || ''}"></td>
     <td><input class="mat-auto" type="checkbox" ${material.auto_formula ? 'checked' : ''}></td>
     <td><input class="mat-override" type="checkbox" ${material.manual_override ? 'checked' : ''}></td>
-    <td><button class="ghost-btn formula-btn" type="button">Formula</button><input class="mat-formula hidden" value="${escapeHtml(material.formula || '')}"></td>
+    <td><input class="mat-formula" list="formulaSuggestions" value="${escapeHtml(material.formula || '')}"></td>
     <td><button class="icon-btn remove-material" type="button">X</button></td>
   `;
   $('#projectMaterials').appendChild(row);
   $('.remove-material', row).addEventListener('click', () => { row.remove(); calculateProject(); });
-  $('.formula-btn', row).addEventListener('click', () => openFormulaDialog(row));
-  $$('.mat-name, .mat-category, .mat-unit, .mat-qty, .mat-price, .mat-waste, .mat-auto, .mat-override', row).forEach(input => {
+  $$('.mat-name, .mat-category, .mat-unit, .mat-qty, .mat-price, .mat-waste, .mat-auto, .mat-override, .mat-formula', row).forEach(input => {
     const updateMaterial = () => {
       hydrateMaterialFromCatalog(row);
       const readOnly = $('.mat-auto', row).checked && !$('.mat-override', row).checked;
