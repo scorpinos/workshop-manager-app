@@ -392,8 +392,8 @@ function hydrateMaterialFromCatalog(row) {
   if (material.formula) $('.mat-auto', row).checked = true;
 }
 
-function collectMaterials() {
-  return $$('.material-row').map(row => {
+function collectMaterials(rows = $$('#projectMaterials .material-row')) {
+  return rows.map(row => {
     const name = $('.mat-name', row).value.trim();
     const catalog = (state.lookups.materials || []).find(item => item.name === name && item.unit === $('.mat-unit', row).value);
     return {
@@ -416,7 +416,8 @@ function collectMaterials() {
 async function calculateProject() {
   try {
     const dialog = $('#projectDialog');
-    const materials = collectMaterials();
+    const rows = $$('#projectMaterials .material-row');
+    const materials = collectMaterials(rows);
     const payload = {
       width: Number($('[name="width"]', dialog).value || 0),
       height: Number($('[name="height"]', dialog).value || 0),
@@ -426,7 +427,7 @@ async function calculateProject() {
     const result = await api('/calculate', { method: 'POST', body: JSON.stringify(payload) });
 
     let resultIndex = 0;
-    $$('.material-row').forEach((row, index) => {
+    rows.forEach((row, index) => {
       const material = materials[index];
       if (!material.material_name) return;
 
@@ -440,6 +441,7 @@ async function calculateProject() {
     });
     setTotals(result.totals);
   } catch (error) {
+    console.error(error);
     toast(error.message);
   }
 }
