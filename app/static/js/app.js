@@ -27,7 +27,11 @@ function toast(message) {
   const node = $('#toast');
   node.textContent = message;
   node.classList.add('show');
-  setTimeout(() => node.classList.remove('show'), 2600);
+  if (node.showPopover) node.showPopover();
+  setTimeout(() => {
+    node.classList.remove('show');
+    if (node.hidePopover) node.hidePopover();
+  }, 2600);
 }
 
 function money(value) {
@@ -368,8 +372,8 @@ function openFormulaDialog(row) {
 }
 
 function hydrateMaterialFromCatalog(row) {
-  const name = $('.mat-name', row).value.trim();
-  const material = (state.lookups.materials || []).find(item => item.name === name);
+  const material_name = $('.mat-name', row).value.trim();
+  const material = (state.lookups.materials || []).find(item => item.name === material_name);
   if (!material || row.dataset.hydrated === `${material.id}`) return;
   row.dataset.hydrated = `${material.id}`;
   $('.mat-category', row).value = material.category || '';
@@ -377,16 +381,17 @@ function hydrateMaterialFromCatalog(row) {
   $('.mat-price', row).value = material.unit_price || '';
   $('.mat-formula', row).value = material.formula || '';
   $('.mat-waste', row).value = material.waste_percent || '';
+  row.dataset.isLabor = material.category === 'Labor' || material_name === 'Working hand' ? '1' : '0';
   if (material.formula) $('.mat-auto', row).checked = true;
 }
 
 function collectMaterials() {
   return $$('.material-row').map(row => {
-    const name = $('.mat-name', row).value.trim();
-    const catalog = (state.lookups.materials || []).find(item => item.name === name && item.unit === $('.mat-unit', row).value);
+    const material_name = $('.mat-name', row).value.trim();
+    const catalog = (state.lookups.materials || []).find(item => item.name === material_name && item.unit === $('.mat-unit', row).value);
     return {
       material_id: catalog?.id || null,
-      material_name: name,
+      material_name: material_name,
       category: $('.mat-category', row).value,
       unit: $('.mat-unit', row).value,
       quantity: Number($('.mat-qty', row).value || 0),
@@ -395,7 +400,7 @@ function collectMaterials() {
       auto_formula: $('.mat-auto', row).checked,
       manual_override: $('.mat-override', row).checked,
       waste_percent: Number($('.mat-waste', row).value || 0),
-      is_labor: row.dataset.isLabor === '1' || $('.mat-category', row).value === 'Labor',
+      is_labor: row.dataset.isLabor === '1' || $('.mat-category', row).value === 'Labor' || material_name === 'Working hand',
       total_price: Number($('.mat-total', row).value || 0),
     };
   }).filter(item => item.material_name);
@@ -411,8 +416,9 @@ async function calculateProject() {
       materials: collectMaterials(),
     };
     const result = await api('/calculate', { method: 'POST', body: JSON.stringify(payload) });
+    const rowsWithNames = $$('.material-row').filter(row => $('.mat-name', row).value.trim());
     result.materials.forEach((material, index) => {
-      const row = $$('.material-row')[index];
+      const row = rowsWithNames[index];
       if (!row) return;
       if (!$('.mat-override', row).checked) {
         $('.mat-qty', row).value = material.quantity || '';
@@ -429,6 +435,7 @@ function setTotals(totals) {
   const finalPrice = Number($('[name="final_price"]', $('#projectDialog')).value || totals.final_price || 0);
   const values = {
     materials_total: roundUp(totals.materials_total || 0),
+    labor_total: roundUp(totals.labor_total || 0),
     price: roundUp(totals.price || 0),
     profit: roundUp(totals.profit || 0),
     profit_percent: `${totals.profit_percent || 0}%`,

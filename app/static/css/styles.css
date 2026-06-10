@@ -205,7 +205,7 @@ body.light .dialog-card { background: rgba(255,255,255,.98); }
   padding: 5px 7px;
 }
 .compact-table .icon-btn { width: 32px; height: 32px; }
-.totals-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin: 14px 0; }
+.totals-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin: 14px 0; }
 .totals-row label { color: var(--muted); display: grid; gap: 6px; }
 .payment-panel { margin-top: 12px; }
 .payment-item, .material-pill { display: flex; justify-content: space-between; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); color: var(--muted); }
@@ -217,10 +217,13 @@ body.light .dialog-card { background: rgba(255,255,255,.98); }
 menu { justify-content: flex-end; padding: 0; margin-bottom: 0; }
 
 #toast {
-  position: fixed; right: 24px; bottom: 24px; padding: 12px 14px; border-radius: var(--radius);
+  position: fixed; right: 24px; bottom: 24px; top: auto; left: auto;
+  padding: 12px 14px; border-radius: var(--radius);
   color: #071015; background: var(--accent); box-shadow: var(--shadow);
   transform: translateY(90px); opacity: 0; transition: .25s ease; z-index: 20; font-weight: 800;
+  border: none; margin: 0;
 }
+#toast:popover-open { display: block; }
 #toast.show { transform: none; opacity: 1; }
 
 .login-body { display: grid; place-items: center; }
